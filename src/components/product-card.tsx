@@ -7,21 +7,29 @@ import { ProductImage } from "@/components/flowers/ProductImage";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/data";
 import { itemVariants } from "@/components/reveal";
+import { WishlistButton } from "@/components/wishlist-button";
 
 export function ProductCard({ product }: { product: Product }) {
   return (
-    <motion.div variants={itemVariants}>
+    <motion.div variants={itemVariants} className="group">
       <Link
         href={`/catalogo/${product.slug}`}
-        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition-all duration-500 hover:-translate-y-1 hover:border-primary/20 hover:shadow-[0_24px_48px_-24px_rgba(60,40,10,0.18)]"
+        className="block"
       >
-        <div className="relative aspect-[4/5] overflow-hidden">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-2xl">
           <ProductImage
             product={product}
             size={320}
-            className="absolute inset-0 flex h-full w-full items-center justify-center transition-transform duration-[1.2s] ease-out group-hover:scale-105"
+            className="absolute inset-0 flex h-full w-full items-center justify-center transition-transform duration-[1.2s] ease-out group-hover:scale-[1.04]"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-foreground/[0.05] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+          {/* warm bottom wash on hover */}
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+            style={{
+              background:
+                "linear-gradient(to top, oklch(0.22 0.025 65 / 0.18), transparent)",
+            }}
+          />
           {product.badges && product.badges.length > 0 && (
             <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
               {product.badges.map((b) => (
@@ -35,30 +43,34 @@ export function ProductCard({ product }: { product: Product }) {
               ))}
             </div>
           )}
+          <div className="absolute right-3 top-3 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
+            <WishlistButton productId={product.id} productName={product.name} />
+          </div>
         </div>
-        <div className="flex flex-1 flex-col justify-between gap-3 p-5">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-              {product.category}
-            </p>
-            <h3 className="mt-1.5 font-display text-xl tracking-tight">
-              {product.name}
-            </h3>
-            <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
-              {product.shortDescription}
-            </p>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-display text-lg tabular-nums">
-              {formatPrice(product.price)}
+
+        <div className="mt-5 grid grid-cols-[1fr_auto] items-start gap-x-4 gap-y-1.5">
+          <h3 className="font-display text-xl leading-tight tracking-tight">
+            {product.name}
+          </h3>
+          <span
+            className="font-display text-lg italic tabular-nums"
+            style={{ color: "var(--ochre-deep)" }}
+          >
+            {formatPrice(product.price)}
+          </span>
+          <p className="col-span-2 line-clamp-2 text-sm text-[var(--ink-soft)]">
+            {product.shortDescription}
+          </p>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3 text-[11px] uppercase tracking-[0.22em] text-[var(--ink-soft)]">
+          <span>{product.category}</span>
+          <span className="inline-flex items-center gap-1 transition-all group-hover:gap-1.5 group-hover:text-[var(--ink-deep)]">
+            Ver
+            <span className="transition-transform group-hover:translate-x-0.5">
+              →
             </span>
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-all duration-300 group-hover:gap-1.5 group-hover:text-primary">
-              Ver detalle
-              <span className="transition-transform group-hover:translate-x-0.5">
-                →
-              </span>
-            </span>
-          </div>
+          </span>
         </div>
       </Link>
     </motion.div>

@@ -1,9 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FlowerPaths } from "./Flower";
 import { getFlower, getRibbon, getWrap } from "@/lib/data";
-import { clampToBounds, type Placement } from "@/lib/bouquet-layout";
+import {
+  clampToBounds,
+  GATHER_X,
+  GATHER_Y,
+  type Placement,
+} from "@/lib/bouquet-layout";
 
 type Props = {
   placements: Placement[];
@@ -12,7 +17,6 @@ type Props = {
   size?: number;
   showWrap?: boolean;
   className?: string;
-  /** When true, flowers are draggable; clicking selects them. */
   interactive?: boolean;
   onPlacementsChange?: (next: Placement[]) => void;
 };
@@ -49,10 +53,14 @@ export function InteractiveBouquetView({
     id: string;
     offsetX: number;
     offsetY: number;
+    moved: boolean;
   } | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Sort back-to-front (lower z renders first)
   const sorted = [...placements].sort((a, b) => a.z - b.z);
+  // Compute distance-from-center to apply atmospheric perspective
   const wrap = wrapId ? getWrap(wrapId) : undefined;
   const ribbon = ribbonId ? getRibbon(ribbonId) : undefined;
 
@@ -60,7 +68,6 @@ export function InteractiveBouquetView({
   const wrapShadow = mix(wrapBase, "#1a1006", 0.32);
   const wrapHighlight = mix(wrapBase, "#ffffff", 0.22);
 
-  // Convert pointer event to SVG coordinates
   function pointerToSvg(clientX: number, clientY: number) {
     const svg = svgRef.current;
     if (!svg) return { x: 0, y: 0 };
@@ -81,11 +88,13 @@ export function InteractiveBouquetView({
     e.preventDefault();
     e.stopPropagation();
     (e.target as Element).setPointerCapture?.(e.pointerId);
+    setSelectedId(p.id);
     const { x, y } = pointerToSvg(e.clientX, e.clientY);
     setDragging({
       id: p.id,
       offsetX: p.x - x,
       offsetY: p.y - y,
+      moved: false,
     });
   }
 
@@ -94,6 +103,7 @@ export function InteractiveBouquetView({
     const { x, y } = pointerToSvg(e.clientX, e.clientY);
     const newX = x + dragging.offsetX;
     const newY = y + dragging.offsetY;
+    setDragging((d) => (d ? { ...d, moved: true } : null));
     onPlacementsChange(
       placements.map((p) => {
         if (p.id !== dragging.id) return p;
@@ -109,6 +119,43 @@ export function InteractiveBouquetView({
     setDragging(null);
   }
 
+  // Rotate hovered/selected flower with scroll wheel
+  useEffect(() => {
+    if (!interactive) return;
+    function onWheel(e: WheelEvent) {
+      const target = hoveredId || selectedId;
+      if (!target || !onPlacementsChange) return;
+      const svg = svgRef.current;
+      if (!svg) return;
+      // Only intercept when over the svg
+      const rect = svg.getBoundingClientRect();
+      if (
+        e.clientX < rect.left ||
+        e.clientX > rect.right ||
+        e.clientY < rect.top ||
+        e.clientY > rect.bottom
+      )
+        return;
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 8 : -8;
+      onPlacementsChange(
+        placements.map((p) =>
+          p.id === target
+            ? { ...p, rotation: p.rotation + delta, pinned: true }
+            : p,
+        ),
+      );
+    }
+    window.addEventListener("wheel", onWheel, { passive: false });
+    return () => window.removeEventListener("wheel", onWheel);
+  }, [interactive, hoveredId, selectedId, onPlacementsChange, placements]);
+
+  // Click outside flowers deselects
+  function svgClick(e: React.MouseEvent) {
+    if (!interactive) return;
+    if (e.target === svgRef.current) setSelectedId(null);
+  }
+
   return (
     <svg
       ref={svgRef}
@@ -122,11 +169,30 @@ export function InteractiveBouquetView({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      onClick={svgClick}
     >
       <defs>
+        {/* Atmospheric depth — back flowers get soft blur */}
+        <filter id="bv-depth-blur" x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur stdDeviation="0.6" />
+        </filter>
+        <filter id="bv-depth-blur-strong" x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur stdDeviation="1" />
+        </filter>
+        {/* Saturation reduction for depth */}
+        <filter id="bv-back" x="-10%" y="-10%" width="120%" height="120%">
+          <feGaussianBlur stdDeviation="0.8" />
+          <feColorMatrix
+            type="matrix"
+            values="0.85 0.05 0.05 0 0.04
+                    0.05 0.85 0.05 0 0.04
+                    0.05 0.05 0.85 0 0.04
+                    0 0 0 1 0"
+          />
+        </filter>
         {/* Soft bokeh background */}
         <radialGradient id="bv-bokeh" cx="50%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#fff" stopOpacity="0.6" />
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.7" />
           <stop offset="100%" stopColor="#fff" stopOpacity="0" />
         </radialGradient>
         <linearGradient id="bv-wrap-fold" x1="0" x2="1" y1="0" y2="1">
@@ -140,28 +206,17 @@ export function InteractiveBouquetView({
           <stop offset="100%" stopColor={wrapShadow} stopOpacity="0.4" />
         </linearGradient>
         <radialGradient id="bv-ground" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#000" stopOpacity="0.22" />
+          <stop offset="0%" stopColor="#000" stopOpacity="0.28" />
           <stop offset="100%" stopColor="#000" stopOpacity="0" />
         </radialGradient>
         <radialGradient id="bv-petal-shadow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#000" stopOpacity="0.15" />
+          <stop offset="0%" stopColor="#000" stopOpacity="0.22" />
           <stop offset="100%" stopColor="#000" stopOpacity="0" />
         </radialGradient>
-        <filter id="bv-soft" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" />
-          <feOffset dx="0" dy="3" result="ob" />
-          <feComponentTransfer>
-            <feFuncA type="linear" slope="0.32" />
-          </feComponentTransfer>
-          <feMerge>
-            <feMergeNode />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
 
       {/* Background bokeh */}
-      <circle cx="100" cy="90" r="95" fill="url(#bv-bokeh)" opacity="0.5" />
+      <circle cx="100" cy="90" r="95" fill="url(#bv-bokeh)" opacity="0.4" />
 
       {/* Ground shadow */}
       {placements.length > 0 && (
@@ -169,36 +224,15 @@ export function InteractiveBouquetView({
           cx="100"
           cy={showWrap && wrap ? 265 : 195}
           rx={Math.min(80, 30 + placements.length * 1.5)}
-          ry="8"
+          ry="9"
           fill="url(#bv-ground)"
         />
       )}
 
-      {/* Stems behind wrap */}
-      {showWrap && wrap && placements.length > 0 && (
-        <g opacity="0.85">
-          {[
-            { x1: 78, x2: 72, color: "#5e7257" },
-            { x1: 92, x2: 86, color: "#4a5d3f" },
-            { x1: 100, x2: 100, color: "#5e7257" },
-            { x1: 108, x2: 114, color: "#4a5d3f" },
-            { x1: 122, x2: 128, color: "#5e7257" },
-          ].map((s, i) => (
-            <path
-              key={i}
-              d={`M${s.x1} 158 Q${(s.x1 + s.x2) / 2} 200 ${s.x2} 250`}
-              stroke={s.color}
-              strokeWidth="1.6"
-              fill="none"
-              strokeLinecap="round"
-            />
-          ))}
-        </g>
-      )}
 
       {/* WRAP */}
       {showWrap && wrap && (
-        <g filter="url(#bv-soft)">
+        <g>
           <path
             d="M28 158 L172 158 L150 252 L50 252 Z"
             fill={wrapShadow}
@@ -295,6 +329,8 @@ export function InteractiveBouquetView({
                 d="M100 210 Q110 232 122 244 L118 246 Q104 234 100 213 Z"
                 fill={mix(ribbon.color, "#000", 0.1)}
               />
+              {/* Ribbon highlight */}
+              <ellipse cx="86" cy="204" rx="6" ry="2" fill="#fff" opacity="0.25" transform="rotate(-15 86 204)" />
             </g>
           )}
         </g>
@@ -327,7 +363,132 @@ export function InteractiveBouquetView({
         </g>
       )}
 
-      {/* Per-flower ground shadows (subtle) */}
+      {/* Stems from gather point to each flower */}
+      {placements.length > 0 && (
+        <g>
+          {sorted.map((p) => {
+            const f = getFlower(p.flowerId);
+            if (!f) return null;
+            const flowerRadius = p.radius * p.scale;
+            const stemBottomY = p.y + flowerRadius * 0.4;
+            if (stemBottomY >= GATHER_Y - 2) return null;
+
+            const dx = p.x - GATHER_X;
+            const dy = stemBottomY - GATHER_Y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+            // Curve outward slightly — perpendicular to stem direction
+            const baseMidX = GATHER_X + dx * 0.5;
+            const baseMidY = GATHER_Y + dy * 0.5;
+            const perpX = -dy / dist;
+            const perpY = dx / dist;
+            const curveAmt = Math.min(8, Math.abs(dx) * 0.1 + 2);
+            const midX = rnd3(baseMidX + perpX * curveAmt * Math.sign(dx || 1));
+            const midY = rnd3(baseMidY + perpY * curveAmt * Math.sign(dx || 1));
+
+            // Per-stem variation from id
+            const seedHash = (parseInt(p.id.slice(-4), 36) || 0) % 7;
+            const toneOptions = [
+              "#5e7257",
+              "#6a8064",
+              "#4a5d3f",
+              "#7d9276",
+              "#566a4f",
+              "#869c7a",
+              "#3f5236",
+            ];
+            const tone = toneOptions[seedHash];
+            const thickness = 1.5 + (seedHash % 3) * 0.4;
+
+            const d = `M${rnd3(GATHER_X)} ${rnd3(GATHER_Y)} Q${midX} ${midY} ${rnd3(p.x)} ${rnd3(stemBottomY)}`;
+
+            // Leaves on a subset of stems
+            const showLeaves = seedHash % 3 === 0 && f.kind !== "eucalyptus" && f.kind !== "lavender";
+            const leafPositions = showLeaves ? [0.36, 0.62] : [];
+
+            return (
+              <g key={`stem-${p.id}`}>
+                {/* Dark stroke for depth */}
+                <path
+                  d={d}
+                  stroke="#2a3a20"
+                  strokeWidth={thickness + 0.7}
+                  fill="none"
+                  strokeLinecap="round"
+                  opacity="0.45"
+                />
+                {/* Main stem */}
+                <path
+                  d={d}
+                  stroke={tone}
+                  strokeWidth={thickness}
+                  fill="none"
+                  strokeLinecap="round"
+                />
+                {/* Highlight line */}
+                <path
+                  d={d}
+                  stroke="#b3c4a4"
+                  strokeWidth={thickness * 0.28}
+                  fill="none"
+                  strokeLinecap="round"
+                  opacity="0.55"
+                />
+                {/* Leaves */}
+                {leafPositions.map((tt, li) => {
+                  const one = 1 - tt;
+                  const lx =
+                    one * one * GATHER_X +
+                    2 * one * tt * midX +
+                    tt * tt * p.x;
+                  const ly =
+                    one * one * GATHER_Y +
+                    2 * one * tt * midY +
+                    tt * tt * stemBottomY;
+                  const tangentX =
+                    2 * one * (midX - GATHER_X) + 2 * tt * (p.x - midX);
+                  const tangentY =
+                    2 * one * (midY - GATHER_Y) +
+                    2 * tt * (stemBottomY - midY);
+                  const angle = (Math.atan2(tangentY, tangentX) * 180) / Math.PI;
+                  const leafSide = li % 2 === 0 ? 1 : -1;
+                  return (
+                    <g
+                      key={li}
+                      transform={`translate(${rnd3(lx)} ${rnd3(ly)}) rotate(${rnd3(angle + leafSide * 65)})`}
+                    >
+                      {/* Leaf shape */}
+                      <path
+                        d="M0 0 Q1.5 -1.6 4 -2.6 Q6 -3 6.5 -2 Q6 -0.8 4 -0.2 Q1.5 0.5 0 0 Z"
+                        fill={tone}
+                      />
+                      {/* Leaf vein */}
+                      <path
+                        d="M0.5 -1 Q3 -1.8 6 -2.2"
+                        stroke="#2a3a20"
+                        strokeWidth="0.2"
+                        opacity="0.4"
+                        fill="none"
+                      />
+                      {/* Leaf shadow */}
+                      <path
+                        d="M0 0 Q1.5 -1.6 4 -2.6 Q6 -3 6.5 -2 Q6 -0.8 4 -0.2 Q1.5 0.5 0 0 Z"
+                        fill="#000"
+                        opacity="0.12"
+                      />
+                    </g>
+                  );
+                })}
+              </g>
+            );
+          })}
+          {/* Tight bundle right at the gather — small dark cluster */}
+          <ellipse cx={GATHER_X} cy={GATHER_Y - 1} rx="14" ry="3.5" fill="#2a3a20" opacity="0.45" />
+          <ellipse cx={GATHER_X} cy={GATHER_Y - 2} rx="10" ry="2" fill="#5e7257" opacity="0.55" />
+        </g>
+      )}
+
+      {/* Per-flower ground shadows */}
       {sorted.map((p) => {
         const f = getFlower(p.flowerId);
         if (!f) return null;
@@ -337,14 +498,14 @@ export function InteractiveBouquetView({
             key={`s-${p.id}`}
             cx={rnd3(p.x)}
             cy={rnd3(p.y + r * 0.55)}
-            rx={rnd3(r * 0.65)}
-            ry={rnd3(r * 0.18)}
+            rx={rnd3(r * 0.7)}
+            ry={rnd3(r * 0.2)}
             fill="url(#bv-petal-shadow)"
           />
         );
       })}
 
-      {/* Flowers */}
+      {/* Flowers — with atmospheric depth for back layers */}
       {sorted.map((p) => {
         const f = getFlower(p.flowerId);
         if (!f) return null;
@@ -356,6 +517,10 @@ export function InteractiveBouquetView({
         const rot = rnd3(p.rotation);
         const isHovered = hoveredId === p.id;
         const isDragging = dragging?.id === p.id;
+        const isSelected = selectedId === p.id;
+
+        // Depth filter: greenery (z=0) gets blur+desat, filler (z=1) less, blooms (z>=3) crisp
+        const depthFilter = p.z === 0 ? "url(#bv-back)" : p.z === 1 ? "url(#bv-depth-blur)" : undefined;
 
         return (
           <g
@@ -373,6 +538,7 @@ export function InteractiveBouquetView({
           >
             <g
               transform={`rotate(${rot} ${half} ${half}) scale(${innerScale})`}
+              filter={depthFilter}
               style={{
                 transform: isHovered || isDragging ? "translateY(-2px)" : undefined,
                 transition: "transform 0.2s ease",
@@ -385,16 +551,16 @@ export function InteractiveBouquetView({
                 seed={parseInt(p.id.slice(-4), 36) || 0}
               />
             </g>
-            {interactive && isHovered && !isDragging && (
+            {interactive && (isHovered || isSelected) && !isDragging && (
               <circle
                 cx={half}
                 cy={half}
-                r={p.radius * 1.1}
+                r={p.radius * 1.15}
                 fill="none"
                 stroke="currentColor"
-                strokeOpacity="0.4"
-                strokeDasharray="3 3"
-                strokeWidth="0.8"
+                strokeOpacity={isSelected ? 0.55 : 0.35}
+                strokeDasharray={isSelected ? undefined : "3 3"}
+                strokeWidth={isSelected ? 1 : 0.8}
               />
             )}
           </g>

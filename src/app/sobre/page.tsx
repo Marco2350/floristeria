@@ -1,4 +1,4 @@
-import { BouquetView } from "@/components/flowers/BouquetView";
+import { LogoPlaceholder } from "@/components/flowers/logo-placeholder";
 
 export const metadata = {
   title: "Nuestra historia · Lirios",
@@ -17,10 +17,9 @@ export default function SobrePage() {
       <div className="mt-12 grid gap-12 md:grid-cols-3 md:items-start">
         <div className="md:col-span-2 space-y-5 text-lg leading-relaxed text-muted-foreground">
           <p>
-            En 2010 empezamos con un puesto de tres metros cuadrados en el
-            mercado de Coyoacán. Mi mamá me enseñó a hacer nudos antes que a
-            sumar. Hoy seguimos levantándonos a las 4:30 para escoger los
-            tallos antes que nadie.
+            Empezamos con un puesto pequeño en El Progreso, Yoro. Mi mamá me
+            enseñó a hacer nudos antes que a sumar. Hoy seguimos levantándonos
+            temprano para escoger los tallos antes que nadie.
           </p>
           <p>
             Trabajamos con productores locales que conocemos por nombre. No
@@ -32,23 +31,11 @@ export default function SobrePage() {
             flores son un gesto, y un gesto a medias no nos sirve.
           </p>
         </div>
-        <div
-          className="aspect-[3/4] rounded-2xl"
-          style={{ background: "var(--secondary)" }}
-        >
-          <div className="flex h-full items-center justify-center">
-            <BouquetView
-              flowers={[
-                { flowerId: "peony-blush", qty: 4 },
-                { flowerId: "rose-pink", qty: 3 },
-                { flowerId: "eucalyptus", qty: 3 },
-              ]}
-              wrapId="wrap-linen"
-              ribbonId="ribbon-cream"
-              size={260}
-            />
-          </div>
-        </div>
+        <LogoPlaceholder
+          size={260}
+          background="var(--secondary)"
+          className="flex aspect-[3/4] items-center justify-center rounded-2xl"
+        />
       </div>
 
       <div className="mt-20 grid gap-6 sm:grid-cols-3">

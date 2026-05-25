@@ -5,6 +5,8 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { CartDrawer } from "@/components/cart-drawer";
 import { LoadingScreen } from "@/components/loading-screen";
+import { NewsletterPopup } from "@/components/newsletter-popup";
+import { PublicChrome } from "@/components/site-chrome";
 import "./globals.css";
 
 const inter = Inter({
@@ -37,11 +39,16 @@ export default function RootLayout({
       className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <LoadingScreen />
-        <SiteHeader />
+        <PublicChrome>
+          <LoadingScreen />
+          <SiteHeader />
+        </PublicChrome>
         <main className="flex-1">{children}</main>
-        <SiteFooter />
-        <CartDrawer />
+        <PublicChrome>
+          <SiteFooter />
+          <CartDrawer />
+          <NewsletterPopup />
+        </PublicChrome>
         <Toaster position="bottom-right" />
       </body>
     </html>

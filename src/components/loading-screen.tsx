@@ -13,12 +13,13 @@ function seededRand(seed: number) {
 }
 
 export function LoadingScreen() {
+  // Mounts only on full page loads. Next.js keeps the root layout mounted
+  // across client-side <Link> navigations, so this effect won't re-run.
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
     const hide = setTimeout(() => setVisible(false), 2400);
-    // Restore scroll after the exit animation finishes (~700ms more).
     const unlock = setTimeout(() => {
       document.body.style.overflow = "";
     }, 3200);

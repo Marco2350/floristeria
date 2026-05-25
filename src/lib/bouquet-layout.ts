@@ -1,8 +1,9 @@
 /**
  * Bouquet layout with collision-aware placement.
  *
- * Coordinate system: 200x200 SVG units, center at (100, 100).
- * Each flower has a "radius" (visual half-size) used for collision tests.
+ * Coordinate system: 200x280 SVG units.
+ * Flowers cluster around (CENTER_X, CENTER_Y) and their stems converge
+ * at the gather point near the top of the paper wrap.
  */
 
 import { getFlower } from "./data";
@@ -25,8 +26,12 @@ export type Placement = {
 export type Stem = { flowerId: string; qty: number };
 
 const CENTER_X = 100;
-const CENTER_Y = 100;
-const MAX_R = 78; // Outer bounds for placement
+const CENTER_Y = 80;
+const MAX_R = 72;
+
+/** Point where all stems converge above the paper wrap. */
+export const GATHER_X = 100;
+export const GATHER_Y = 158;
 
 function layerWeight(kind: string) {
   if (kind === "eucalyptus") return 0;
@@ -77,10 +82,10 @@ function seededAngle(seed: number, i: number) {
 function ringRadius(ring: number): number {
   // Generous ring spacing so flowers breathe
   if (ring === 0) return 0;
-  if (ring === 1) return 28;
-  if (ring === 2) return 50;
-  if (ring === 3) return 68;
-  return 78;
+  if (ring === 1) return 26;
+  if (ring === 2) return 46;
+  if (ring === 3) return 62;
+  return 72;
 }
 
 function ringCapacity(ring: number): number {

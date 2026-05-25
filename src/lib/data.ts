@@ -429,5 +429,5 @@ export const categoryMeta: Record<
 };
 
 export function formatPrice(price: number) {
-  return `$${price.toLocaleString("es-MX")}`;
+  return `L. ${price.toLocaleString("es-HN")}`;
 }

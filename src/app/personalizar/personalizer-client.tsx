@@ -118,14 +118,45 @@ export function PersonalizerClient() {
       <div className="mt-10 grid gap-10 lg:grid-cols-5">
         {/* PREVIEW */}
         <div className="lg:col-span-3 lg:sticky lg:top-24 lg:self-start">
-          <div
-            className="relative overflow-hidden rounded-3xl border border-border/60"
-            style={{
-              background:
-                "radial-gradient(ellipse at top, oklch(0.96 0.025 85) 0%, oklch(0.93 0.018 130) 100%)",
-            }}
-          >
-            <div className="aspect-square flex items-center justify-center p-6">
+          <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card">
+            {/* Studio background — soft warm bokeh with paper grain */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(120% 90% at 50% 25%, oklch(0.97 0.018 85) 0%, oklch(0.93 0.025 80) 45%, oklch(0.88 0.03 75) 100%)",
+              }}
+            />
+            {/* Soft out-of-focus highlights */}
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(circle at 25% 28%, oklch(1 0 0 / 0.55) 0px, transparent 16%)," +
+                  "radial-gradient(circle at 78% 22%, oklch(1 0 0 / 0.4) 0px, transparent 14%)," +
+                  "radial-gradient(circle at 85% 78%, oklch(0.85 0.05 25 / 0.35) 0px, transparent 18%)," +
+                  "radial-gradient(circle at 18% 80%, oklch(0.86 0.05 130 / 0.3) 0px, transparent 20%)",
+                filter: "blur(1px)",
+              }}
+            />
+            {/* Paper grain */}
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.08] mix-blend-multiply"
+              style={{
+                backgroundImage:
+                  "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+              }}
+            />
+            {/* Vignette */}
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 50%, oklch(0.2 0.03 60 / 0.18) 100%)",
+              }}
+            />
+
+            <div className="relative aspect-square flex items-center justify-center p-6">
               <InteractiveBouquetView
                 placements={placements}
                 wrapId={wrapId}
@@ -133,7 +164,7 @@ export function PersonalizerClient() {
                 size={520}
                 interactive
                 onPlacementsChange={setPlacements}
-                className="drop-shadow-xl"
+                className="drop-shadow-2xl"
               />
             </div>
 
@@ -162,10 +193,10 @@ export function PersonalizerClient() {
 
             {/* Hint */}
             {placements.length > 0 && (
-              <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2">
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-background/85 px-3 py-1.5 text-[11px] text-muted-foreground backdrop-blur">
+              <div className="pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-background/90 px-3 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
                   <Hand className="size-3" />
-                  Arrastra las flores para reacomodar
+                  Arrastra para mover · rueda del mouse para rotar
                 </div>
               </div>
             )}

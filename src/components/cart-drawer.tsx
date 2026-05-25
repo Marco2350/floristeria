@@ -17,9 +17,10 @@ import {
   getProductById,
 } from "@/lib/cart-store";
 import { formatPrice } from "@/lib/data";
-import { BouquetView } from "@/components/flowers/BouquetView";
+import { LogoPlaceholder } from "@/components/flowers/logo-placeholder";
 import { ProductImage } from "@/components/flowers/ProductImage";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { buildWhatsappCartUrl } from "@/lib/whatsapp";
+import { MessageCircle, Minus, Plus, Trash2 } from "lucide-react";
 
 export function CartDrawer() {
   const isOpen = useCart((s) => s.isOpen);
@@ -89,14 +90,10 @@ export function CartDrawer() {
                       {item.type === "product" ? (
                         <RenderProductThumb productId={item.productId} />
                       ) : (
-                        <BouquetView
-                          flowers={item.config.flowers.map((f) => ({
-                            flowerId: f.flowerId,
-                            qty: f.qty,
-                          }))}
-                          wrapId={item.config.wrapId}
-                          ribbonId={item.config.ribbonId}
+                        <LogoPlaceholder
                           size={80}
+                          background="var(--muted)"
+                          className="h-full w-full"
                         />
                       )}
                     </div>
@@ -162,11 +159,30 @@ export function CartDrawer() {
               Envío y método de pago se calculan en el siguiente paso.
             </p>
             <Separator className="my-4" />
-            <Button className="w-full" size="lg" disabled>
-              Pagar — próximamente
-            </Button>
+            <div className="space-y-2">
+              <Link
+                href="/checkout"
+                onClick={close}
+                className={buttonVariants({ size: "lg" })}
+              >
+                Finalizar pedido →
+              </Link>
+              <a
+                href={buildWhatsappCartUrl(items, total)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={close}
+                className={buttonVariants({
+                  size: "lg",
+                  variant: "outline",
+                })}
+              >
+                <MessageCircle className="mr-1.5 size-4" />
+                Pedir por WhatsApp
+              </a>
+            </div>
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              El cobro con tarjeta se habilitará al integrar Stripe.
+              WhatsApp: pagas en efectivo o transferencia.
             </p>
           </div>
         )}
